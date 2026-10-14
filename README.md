@@ -203,9 +203,8 @@ capture on the physical chip is unproven.
 If promiscuous mode turns out not to work on this board, the fallback is scan-only:
 keep the access point list, drop the device count. That still ships.
 
-The full plan, with the reasoning behind each decision, is in
-[`ArsyWatch-PRD.md`](ArsyWatch-PRD.md). The API contract is
-[`docs/api.md`](docs/api.md), and the deploy runbook is [`deploy/README.md`](deploy/README.md).
+The API contract everything is built against is [`docs/api.md`](docs/api.md), and the
+deploy runbook is [`deploy/README.md`](deploy/README.md).
 
 ---
 

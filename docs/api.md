@@ -2,7 +2,7 @@
 
 > Versi: 1.0 · Tarikh: 14 Okt 2026
 > Status: **Beku (frozen)** — firmware, server, dan dashboard semua bergantung pada dokumen ini.
-> Rujukan: [`ArsyWatch-PRD.md`](../ArsyWatch-PRD.md) §4 · [`DESIGN.md`](../DESIGN.md)
+> Rujukan: [`DESIGN.md`](../DESIGN.md)
 
 Dokumen ini menggantikan penanda **TBD** dalam PRD §4 (*"lihat `docs/api.md` (TBD) untuk
 kontrak penuh"*). Sebarang perubahan selepas Fasa 1 bermula memerlukan bump versi
