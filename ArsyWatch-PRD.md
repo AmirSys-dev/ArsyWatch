@@ -335,15 +335,20 @@ Skop pemantauan sahaja dijangka ~20–25 jam. Sijil Stardance perlu 31 jam disah
 ## Lampiran A — Keperluan Pematuhan Stardance
 
 ```
-[ ] Kategori projek: Hardware
-[ ] Repositori GitHub awam, lesen MIT
-[ ] README lengkap
-[ ] URL demo langsung (bukan pautan GitHub) — awam tanpa login
-[ ] 31 jam disahkan dalam Hackatime
-[ ] Minimum 4 devlog (had 10 jam setiap devlog)
+[x] Kategori projek: Software
+[x] Repositori GitHub awam, lesen MIT
+[x] README lengkap
+[x] URL demo langsung (bukan pautan GitHub) — awam tanpa login
+[ ] 31 jam disahkan dalam Hackatime  (kini 2j 10m)
+[ ] Minimum 4 devlog (had 10 jam setiap devlog)  (kini 3)
 [ ] Video demo perkakasan
 [ ] Timelapse perkakasan (tool Lapse)
 ```
+
+**Nota v1.2:** kategori ditukar daripada **Hardware** kepada **Software**. Projek ini
+memang ada perkakasan (satu nod ESP8266), tetapi nilai terasnya ialah perisian: ingest
+server, kontrak API, dashboard langsung. Awak (pemilik projek) yang tentukan kategori
+ini, dan awak pilih Software.
 
 ## Lampiran B — Andaian & Keputusan
 

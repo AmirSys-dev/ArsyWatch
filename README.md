@@ -8,7 +8,9 @@ shows you what is actually going on. How many routers are shouting on each chann
 How many phones and laptops are nearby. Which channel is the crowded one, so you
 know which one to move to.
 
-It is a hardware project for **Stardance Challenge 2026**.
+It is a software project for **Stardance Challenge 2026**.
+
+**Live demo: [arsywatch.arsyads.dev](https://arsywatch.arsyads.dev)** — no login, real data.
 
 ![How ArsyWatch works: a chip listens to WiFi, posts counts to a server every 30 seconds, and the server pushes them to a live page](assets/scan-flow.svg)
 
@@ -23,7 +25,7 @@ also use, everyone talks over each other and everything gets slow.
 Your router will let you pick a lane. It just will not tell you which lanes are busy.
 That information is invisible unless you go looking for it with the right hardware.
 
-ArsyWatch is that hardware. It listens, counts, and puts the answer on a web page.
+ArsyWatch is that listener. It counts, and puts the answer on a web page.
 
 ---
 
@@ -64,18 +66,19 @@ surprised later.
 
 ## How it is built
 
-Four parts, all in this repo.
+Five parts, all in this repo.
 
 | Folder | What it is | Status |
 |---|---|---|
-| `firmware/` | The ESP8266 sketch that does the listening | **compiles** (`pio run` → 40% RAM, 37% flash) |
-| `server/` | Node + Express + SQLite. Takes the data, stores it, serves it | **working**, 46 tests pass |
-| `dashboard/` | The public web page | 3 layouts built, one being chosen |
-| `docs/` | The API contract everything else follows | done |
+| `firmware/` | The ESP8266 sketch that does the listening | compiles (`pio run` → 40% RAM, 37% flash) |
+| `server/` | Node + Express + SQLite. Takes the data, stores it, serves it | **live**, 46 tests pass |
+| `dashboard/` | The public web page | **live** at [arsywatch.arsyads.dev](https://arsywatch.arsyads.dev) |
+| `deploy/` | systemd + nginx config for the VPS | applied |
+| `docs/` | The API contract everything else follows | frozen |
 
-The server and the firmware are written. The firmware has been verified against the real
-server (a POST of its exact payload returns `201`), but it has not yet run on a physical
-board — that is the next step.
+The server and the dashboard are running on a VPS behind a Cloudflare Tunnel. The
+firmware compiles and its exact payload has been verified against the live server (it
+returns `201`), but it has **not yet run on the physical board** — that is the next step.
 
 ### The stack, and why
 
@@ -86,6 +89,21 @@ board — that is the next step.
   handles this amount of data easily.
 - **Server-Sent Events** for the live updates. One-way stream, no websocket
   complexity, reconnects on its own.
+- **A single static HTML page** for the dashboard, not a framework. It is one
+  read-only screen; a build step and a Node process would add weight and buy nothing.
+- **Cloudflare Tunnel** for public access. No inbound ports are open on the VPS at
+  all — `cloudflared` dials out, so there is no exposed attack surface.
+
+### What it costs to run
+
+| Process | Memory |
+|---|---|
+| Express + SQLite | ~56 MB |
+| cloudflared | ~27 MB |
+| nginx | ~20 MB |
+| **Total** | **~103 MB** of 1 GB |
+
+The dashboard itself costs nothing — it is a static file served from disk.
 
 ---
 
@@ -170,13 +188,24 @@ browser.
 
 | When | What |
 |---|---|
-| done | API contract, server, tests, design system |
-| next | Firmware: the real scanning code |
-| then | Dashboard: the live web page |
-| then | Deploy to the VPS, write the docs, record the demo |
+| done | API contract, server, tests, design system, deploy, dashboard |
+| **next** | **Flash the ESP8266 and confirm real capture on the board** |
+| then | Let it run for a week and validate the counts against reality |
+| then | Demo video and timelapse for Stardance |
+
+### The honest status
+
+The dashboard is live but the page is empty until a node posts data. That is the one
+gap left: the firmware has never run on real hardware. It compiles, and its exact
+payload has been replayed into the live server to confirm a `201`, but promiscuous
+capture on the physical chip is unproven.
+
+If promiscuous mode turns out not to work on this board, the fallback is scan-only:
+keep the access point list, drop the device count. That still ships.
 
 The full plan, with the reasoning behind each decision, is in
-[`ArsyWatch-PRD.md`](ArsyWatch-PRD.md).
+[`ArsyWatch-PRD.md`](ArsyWatch-PRD.md). The API contract is
+[`docs/api.md`](docs/api.md), and the deploy runbook is [`deploy/README.md`](deploy/README.md).
 
 ---
 

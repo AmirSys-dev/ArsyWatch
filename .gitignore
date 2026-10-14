@@ -7,6 +7,10 @@ node_modules/
 dist/
 .next/
 out/
+# ...but the dashboard IS tracked: it is a hand-written static page, not a build
+# artifact. Negation must come after the rule it overrides.
+!dashboard/out/
+!dashboard/out/**
 .DS_Store
 
 # Firmware secrets — the real header holds wifi credentials, the device token,

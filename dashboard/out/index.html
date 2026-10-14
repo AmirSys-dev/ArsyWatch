@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>ArsyWatch — WiFi Air Monitor</title>
+<meta name="description" content="Live view of the 2.4 GHz air around the house: routers per channel, unique devices, measured every 30 seconds."/>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23F78522'/%3E%3C/svg%3E"/>
+<style>
+  :root{
+    --bg-1:#FFFFFF; --bg-2:#A9B3A8; --bg-3:#788877;
+    --fg-1:#1A1E1A; --fg-2:#627061; --fg-3:#93A092;
+    --accent-1:#F78522; --accent-2:#CF6408; --accent-3:#9D4D06;
+    --success:#395F38; --danger:#BA3A2E; --info:#476C82;
+    --rule: color-mix(in srgb, var(--bg-3) 26%, transparent);
+    --rule-soft: color-mix(in srgb, var(--bg-3) 13%, transparent);
+    --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", "Noto Sans", sans-serif;
+    --font-mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+    --r-sm:6px; --r:20px; --r-lg:28px;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-quint: cubic-bezier(0.22, 1, 0.36, 1);
+    --pad: clamp(1.25rem, 5vw, 3.5rem);
+  }
+  *{box-sizing:border-box;margin:0}
+  html{-webkit-font-smoothing:antialiased;text-size-adjust:100%}
+  body{background:var(--bg-1);color:var(--fg-1);font-family:var(--font-ui);
+       font-size:15px;line-height:1.55;padding:var(--pad) 0}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 var(--pad)}
+  .mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+  .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.14em;color:var(--fg-2);font-weight:600}
+
+  .mast{border-bottom:1px solid var(--rule);padding-bottom:22px;margin-bottom:44px;
+        display:flex;flex-wrap:wrap;gap:14px 32px;align-items:flex-end;justify-content:space-between}
+  .mast h1{font-size:clamp(2.6rem,7vw,4.6rem);line-height:.9;letter-spacing:-0.035em;
+           text-transform:uppercase;font-weight:800}
+  .mast .tag{font-size:13px;color:var(--fg-2);margin-top:8px;max-width:38ch}
+  .livebox{text-align:right;font-size:12px;color:var(--fg-2);line-height:1.7}
+  .livebox .row{display:flex;align-items:center;gap:9px;justify-content:flex-end}
+  .dot{position:relative;width:9px;height:9px;border-radius:50%;background:var(--success);flex:none}
+  .dot::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--success);opacity:.5}
+  .dot.down{background:var(--danger)} .dot.down::after{background:var(--danger)}
+  @media (prefers-reduced-motion: no-preference){ .dot::after{animation:halo 2.4s var(--ease-quint) infinite} }
+  @media (prefers-reduced-motion: reduce){ .dot::after{animation:fade 4s ease-in-out infinite} }
+  @keyframes halo{0%{transform:scale(1);opacity:.55}70%{transform:scale(2.6);opacity:0}100%{transform:scale(2.6);opacity:0}}
+  @keyframes fade{0%,100%{opacity:.5}50%{opacity:.12}}
+  .livebox .label{color:var(--fg-1);font-weight:700;text-transform:uppercase;letter-spacing:.08em;font-size:11px}
+
+  .split{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:clamp(2rem,6vw,5.5rem);align-items:start}
+
+  .lede .kicker{margin-bottom:20px}
+  .lede .claim{font-size:clamp(1.6rem,3.4vw,2.5rem);line-height:1.12;letter-spacing:-0.025em;font-weight:600;
+               text-wrap:balance;margin-bottom:20px}
+  .lede .claim em{font-style:normal;color:var(--accent-3)}
+  .lede p{color:var(--fg-2);max-width:44ch;margin-bottom:16px}
+  .bigfig{margin-top:34px;padding-top:26px;border-top:1px solid var(--rule)}
+  .bigfig .n{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
+             font-size:clamp(3.4rem,9vw,5.6rem);line-height:.85;letter-spacing:-0.035em;font-weight:600}
+  .bigfig .l{font-size:12px;text-transform:uppercase;letter-spacing:.1em;color:var(--fg-2);margin-top:12px}
+  .bigfig .c{font-size:12px;color:var(--fg-2);margin-top:6px;max-width:40ch}
+
+  .blocks{display:flex;flex-direction:column}
+  .block{padding:26px 0;border-top:1px solid var(--rule)}
+  .block:first-child{padding-top:0;border-top:0}
+  .block .hd{display:flex;flex-wrap:wrap;gap:6px 16px;align-items:baseline;justify-content:space-between;margin-bottom:20px}
+  .block .hd h2{font-size:11px;text-transform:uppercase;letter-spacing:.12em;font-weight:700}
+  .block .hd .note{font-size:11px;color:var(--fg-2)}
+
+  .chart{display:flex;align-items:flex-end;gap:6px;height:132px;border-bottom:1px solid var(--rule)}
+  .bar{position:relative;flex:1;background:var(--bg-2);border-radius:4px 4px 0 0;min-height:3px;
+       transition-property:background-color;transition-duration:150ms;transition-timing-function:var(--ease-out)}
+  .bar.peak{background:var(--accent-1)}
+  .bar .cap{position:absolute;left:0;right:0;top:-18px;text-align:center;font-size:11px;
+            font-family:var(--font-mono);color:var(--fg-2)}
+  .bar.peak .cap{color:var(--accent-3);font-weight:700}
+  .chlabels{display:flex;gap:6px;margin-top:7px}
+  .chlabels span{flex:1;text-align:center;font-size:11px;font-family:var(--font-mono);color:var(--fg-3)}
+  .chlabels span.is-peak{color:var(--accent-3);font-weight:700}
+  @media (hover:hover) and (pointer:fine){ .bar:hover{background:var(--accent-2)} }
+
+  .tbl-scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  thead th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--fg-2);
+           font-weight:600;padding:0 12px 10px 0;border-bottom:1px solid var(--rule);white-space:nowrap}
+  tbody td{padding:13px 12px 13px 0;border-bottom:1px solid var(--rule-soft);vertical-align:middle}
+  tbody tr:last-child td{border-bottom:0}
+  .num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+  .ssid{font-weight:600}
+  .ssid .hidden-tag{font-weight:400;font-style:italic;color:var(--fg-2)}
+  .bssid{color:var(--fg-2);font-size:13px}
+  .rssi{white-space:nowrap}
+  .sigdot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:7px;vertical-align:middle;background:var(--bg-3)}
+  .sigdot.s-strong{background:var(--success)} .sigdot.s-mid{background:var(--accent-2)} .sigdot.s-weak{background:var(--danger)}
+  .pill{font-size:10px;letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:999px;
+        border:1px solid var(--rule);color:var(--fg-2)}
+  .pill.open{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,transparent)}
+  .pill.wpa3{color:var(--success);border-color:color-mix(in srgb,var(--success) 40%,transparent)}
+  tr.stale{color:var(--fg-3)} tr.stale .ssid{font-weight:500}
+  .stale-flag{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg-2);
+              border:1px solid var(--rule);border-radius:var(--r-sm);padding:1px 6px}
+  @media (hover:hover) and (pointer:fine){ tbody tr:hover td{background:color-mix(in srgb,var(--bg-2) 16%,transparent)} }
+
+  .macrow{display:grid;grid-template-columns:1fr auto;gap:28px;align-items:end}
+  .spark{display:flex;align-items:flex-end;gap:3px;height:76px;border-bottom:1px solid var(--rule)}
+  .sb{flex:1;background:color-mix(in srgb,var(--bg-2) 72%,transparent);border-radius:3px 3px 0 0;min-height:2px;
+      transition-property:background-color;transition-duration:150ms;transition-timing-function:var(--ease-out)}
+  .sb.peak{background:var(--accent-1)}
+  @media (hover:hover) and (pointer:fine){ .sb:hover{background:var(--accent-2)} }
+  .hours{display:flex;gap:3px;margin-top:7px}
+  .hours span{flex:1;text-align:center;font-size:9px;font-family:var(--font-mono);color:var(--fg-3)}
+  .hours span.tick{color:var(--fg-2)}
+  .macnum{text-align:right}
+  .macnum .n{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:40px;line-height:1;letter-spacing:-0.02em}
+  .macnum .l{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--fg-2);margin-top:8px}
+  .macnum .p{font-size:12px;color:var(--fg-2);margin-top:4px}
+  .caveat{margin-top:20px;font-size:13px;color:var(--fg-2);border-left:2px solid var(--accent-1);
+          padding-left:14px;max-width:56ch}
+  .caveat b{color:var(--fg-1);font-weight:600}
+
+  .empty-only{display:none}
+  body[data-view="empty"] .live-only{display:none}
+  body[data-view="empty"] .empty-only{display:block}
+  body[data-view="live"] .empty-only{display:none}
+  .emptycard{border:1px dashed var(--rule);border-radius:var(--r);padding:clamp(2rem,5vw,3.5rem);
+             text-align:center;max-width:520px;margin:0 auto}
+  .emptycard h3{font-size:20px;letter-spacing:-0.01em;margin-bottom:10px}
+  .emptycard p{color:var(--fg-2);font-size:14px;max-width:40ch;margin:0 auto 22px}
+  .emptycard .hint{font-size:12px;color:var(--fg-3);margin-top:20px;font-family:var(--font-mono)}
+  .skel{border-radius:var(--r);background:color-mix(in srgb,var(--bg-2) 22%,transparent);
+        animation:shimmer 1.6s ease-in-out infinite}
+  @keyframes shimmer{0%,100%{opacity:.45}50%{opacity:.85}}
+  .skelgrid{display:flex;flex-direction:column;gap:12px;margin-bottom:28px}
+  .skelrow{display:grid;grid-template-columns:2fr 1fr 1fr;gap:12px}
+  .skelrow .skel{height:14px}
+  .skelblock{height:132px;margin-bottom:28px}
+  @media (prefers-reduced-motion: reduce){ .skel{animation:none;opacity:.6} }
+
+  .banner{display:none;margin-bottom:20px;padding:11px 16px;border-radius:var(--r-sm);
+          background:color-mix(in srgb,var(--danger) 8%,transparent);
+          border:1px solid color-mix(in srgb,var(--danger) 30%,transparent);
+          font-size:13px;color:var(--danger)}
+  body[data-conn="down"] .banner{display:block}
+
+  footer{margin-top:64px;padding-top:20px;border-top:1px solid var(--rule);
+         display:flex;flex-wrap:wrap;gap:8px 24px;justify-content:space-between;font-size:11px;color:var(--fg-2)}
+
+  @media (max-width:900px){
+    .split{grid-template-columns:minmax(0,1fr);gap:48px}
+    .lede{max-width:60ch}
+  }
+  @media (max-width:560px){
+    .mast .livebox{text-align:left}
+    .livebox .row{justify-content:flex-start}
+    .macrow{grid-template-columns:1fr;gap:20px}
+    .macnum{text-align:left}
+  }
+</style>
+</head>
+<body data-view="live" data-conn="up">
+<div class="wrap">
+
+  <header class="mast">
+    <div>
+      <h1>ArsyWatch</h1>
+      <p class="tag">The air around this house, counted every 30 seconds on the 2.4 GHz band.</p>
+    </div>
+    <div class="livebox">
+      <div class="row">
+        <span class="dot" id="dot" aria-hidden="true"></span>
+        <span class="label" id="conn-label">Live</span>
+      </div>
+      <div>last scan <span class="mono" id="last-scan">—</span></div>
+      <div><span class="mono">arsywatch-01</span> &middot; ch 1–14 &middot; 2.4 GHz</div>
+    </div>
+  </header>
+
+  <div class="banner" role="status" id="banner">
+    Cannot reach the server. Showing the last data received. Retrying automatically.
+  </div>
+
+  <main class="split">
+
+    <section class="lede live-only" aria-label="Summary">
+      <div class="eyebrow kicker">Reading the room</div>
+      <p class="claim" id="claim">Scanning the WiFi airwaves…</p>
+      <p id="claim-detail">This page shows what the node measures in the air: which channels are
+      crowded, how many routers sit on each, and how many devices passed through. Nothing here is
+      modelled — the node hears what it hears.</p>
+      <p>If your own router sits on the busiest channel, moving it is the cheapest fix available.
+      The crowded channel is the one to leave.</p>
+
+      <div class="bigfig">
+        <div class="n" id="big-macs">—</div>
+        <div class="l">Unique MAC addresses, 24h</div>
+        <div class="c">Devices that came into range today. It counts addresses, not people.</div>
+      </div>
+    </section>
+
+    <section class="blocks live-only" aria-label="Live data">
+
+      <div class="block">
+        <div class="hd">
+          <h2>Channel congestion</h2>
+          <span class="note">APs per channel &middot; 1h &middot; peak in orange</span>
+        </div>
+        <div class="chart" id="chart" role="img" aria-label="Access points per channel 1 to 14"></div>
+        <div class="chlabels" id="chlabels"></div>
+      </div>
+
+      <div class="block">
+        <div class="hd">
+          <h2>Access points</h2>
+          <span class="note">Sorted by signal &middot; 15m &middot; missing after 90s</span>
+        </div>
+        <div class="tbl-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">SSID</th>
+                <th scope="col">BSSID</th>
+                <th scope="col">Ch</th>
+                <th scope="col">RSSI</th>
+                <th scope="col">Enc</th>
+                <th scope="col">Seen</th>
+              </tr>
+            </thead>
+            <tbody id="aprows"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="hd">
+          <h2>Unique MACs, 24 hours</h2>
+          <span class="note" id="spark-note">hourly buckets</span>
+        </div>
+        <div class="macrow">
+          <div>
+            <div class="spark" id="spark" role="img" aria-label="Hourly unique MAC counts"></div>
+            <div class="hours" id="hours"></div>
+          </div>
+          <div class="macnum">
+            <div class="n" id="mac-total">—</div>
+            <div class="l">Total unique</div>
+            <div class="p" id="mac-peak">—</div>
+          </div>
+        </div>
+        <p class="caveat"><b>This counts MAC addresses, not people.</b> iOS and Android rotate
+        their MAC roughly every 15 minutes, so a single phone can appear as several addresses.
+        Read it as activity in the air, not a headcount.</p>
+      </div>
+
+    </section>
+
+    <section class="empty-only" aria-label="No data yet" style="grid-column:1 / -1">
+      <div class="eyebrow" style="margin-bottom:14px">Waiting for the first scan</div>
+      <div class="skelgrid" aria-hidden="true">
+        <div class="skelrow"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+        <div class="skelrow"><div class="skel"></div><div class="skel"></div><div class="skel"></div></div>
+        <div class="skelblock skel"></div>
+      </div>
+      <div class="emptycard">
+        <h3>No scans yet</h3>
+        <p>The node posts one scan every 30 seconds. This page will fill in by itself — there is
+        nothing to reload and nothing to click.</p>
+        <p class="hint">POST /api/v1/ingest &middot; waiting for arsywatch-01</p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer>
+    <span>Read-only public view. Write controls at <span class="mono">/admin</span> behind auth.</span>
+    <span class="mono">/api/v1/aps &middot; /channels &middot; /devices &middot; SSE /events</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var POLL_MS = 30000;
+  var lastScanAt = null;
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  function ago(sec){
+    if (sec == null) return '—';
+    if (sec < 60) return sec + 's';
+    var m = Math.floor(sec/60), s = sec % 60;
+    if (m < 60) return m + 'm ' + s + 's';
+    return Math.floor(m/60) + 'h ' + (m%60) + 'm';
+  }
+
+  function band(r){ return r >= -60 ? 's-strong' : r >= -75 ? 's-mid' : 's-weak'; }
+
+  async function getJSON(path){
+    var r = await fetch(path, { headers: { accept: 'application/json' } });
+    if (!r.ok) throw new Error(path + ' -> ' + r.status);
+    return r.json();
+  }
+
+  function renderChannels(list){
+    var chart = $('chart'), labels = $('chlabels');
+    chart.textContent = ''; labels.textContent = '';
+    if (!list || !list.length) return;
+
+    var peak = 0;
+    list.forEach(function(c){ if (c.ap_count > peak) peak = c.ap_count; });
+    var max = peak > 0 ? peak + 0.8 : 1, H = 114;
+
+    list.forEach(function(c){
+      var isPeak = !!c.is_peak && c.ap_count > 0;
+      var b = document.createElement('div');
+      b.className = 'bar' + (isPeak ? ' peak' : '');
+      b.style.height = (c.ap_count === 0 ? 3 : Math.max(3, Math.round(c.ap_count / max * H))) + 'px';
+      b.title = 'Channel ' + c.channel + ' — ' + c.ap_count + ' AP' + (c.ap_count === 1 ? '' : 's');
+      var cap = document.createElement('span');
+      cap.className = 'cap';
+      cap.textContent = c.ap_count;
+      b.appendChild(cap);
+      chart.appendChild(b);
+
+      var l = document.createElement('span');
+      l.textContent = c.channel;
+      if (isPeak) l.className = 'is-peak';
+      labels.appendChild(l);
+    });
+
+    var peakCh = (list.find(function(c){ return c.is_peak; }) || {}).channel;
+    chart.setAttribute('aria-label', 'Access points per channel 1 to 14, channel ' + peakCh + ' peaks at ' + peak);
+  }
+
+  function renderAps(list){
+    var rows = $('aprows');
+    rows.textContent = '';
+    if (!list || !list.length) return 0;
+
+    list.slice().sort(function(a,b){ return b.rssi - a.rssi; }).forEach(function(ap){
+      var stale = !!ap.stale;
+      var tr = document.createElement('tr');
+      if (stale) tr.className = 'stale';
+
+      var tdSsid = document.createElement('td');
+      tdSsid.className = 'ssid';
+      if (ap.ssid === '') {
+        var hid = document.createElement('span');
+        hid.className = 'hidden-tag';
+        hid.textContent = 'hidden network';
+        tdSsid.appendChild(hid);
+      } else {
+        tdSsid.textContent = ap.ssid;
+      }
+
+      var tdBssid = document.createElement('td');
+      tdBssid.className = 'bssid num';
+      tdBssid.textContent = ap.bssid;
+
+      tr.appendChild(tdSsid);
+      tr.appendChild(tdBssid);
+      tr.appendChild(tdNum(ap.channel));
+      tr.appendChild(tdRssi(ap.rssi));
+      tr.appendChild(tdEnc(ap.enc));
+      tr.appendChild(tdSeen(ap.age_s, stale));
+      rows.appendChild(tr);
+    });
+    return list.length;
+  }
+
+  function tdNum(v){ var td = document.createElement('td'); td.className = 'num'; td.textContent = v; return td; }
+
+  function tdRssi(rssi){
+    var td = document.createElement('td');
+    td.className = 'num rssi';
+    var d = document.createElement('span');
+    d.className = 'sigdot ' + band(rssi);
+    td.appendChild(d);
+    td.appendChild(document.createTextNode(String(rssi)));
+    return td;
+  }
+
+  function tdEnc(enc){
+    var td = document.createElement('td');
+    var s = document.createElement('span');
+    s.className = 'pill' + (enc === 'open' ? ' open' : enc === 'wpa3' ? ' wpa3' : '');
+    s.textContent = enc;
+    td.appendChild(s);
+    return td;
+  }
+
+  function tdSeen(ageS, stale){
+    var td = document.createElement('td');
+    td.className = 'num';
+    td.textContent = ago(ageS);
+    if (stale) {
+      td.appendChild(document.createTextNode(' '));
+      var f = document.createElement('span');
+      f.className = 'stale-flag';
+      f.textContent = 'missing';
+      td.appendChild(f);
+    }
+    return td;
+  }
+
+  function renderMacs(d){
+    var spark = $('spark'), hours = $('hours');
+    spark.textContent = ''; hours.textContent = '';
+    if (!d || !d.buckets) return;
+
+    var values = d.buckets.map(function(b){ return b.unique; });
+    var mmax = Math.max.apply(null, values.concat([1]));
+
+    values.forEach(function(n, i){
+      var el = document.createElement('div');
+      el.className = 'sb' + (n === mmax && n > 0 ? ' peak' : '');
+      el.style.height = Math.max(2, Math.round(n / mmax * 74)) + 'px';
+      var label = d.buckets[i].bucket.slice(11, 16);
+      el.title = label + ' — ' + n + ' unique';
+      spark.appendChild(el);
+
+      var s = document.createElement('span');
+      if (i % 6 === 0) { s.textContent = label.slice(0,2); s.className = 'tick'; }
+      hours.appendChild(s);
+    });
+
+    $('mac-total').textContent = d.total_unique;
+    $('big-macs').textContent = d.total_unique;
+    if (d.peak) {
+      var t = d.peak.bucket.slice(11,16);
+      $('mac-peak').textContent = 'peak ' + t + ' · ' + d.peak.unique;
+      $('spark-note').textContent = 'hourly buckets · peak ' + t;
+    }
+  }
+
+  function renderClaim(channels, apCount){
+    var claim = $('claim'), detail = $('claim-detail');
+    if (!channels || !channels.length) return;
+
+    var peakEntry = channels.find(function(c){ return c.is_peak; });
+    if (!peakEntry || peakEntry.ap_count === 0) {
+      claim.textContent = 'The air is quiet. No routers are competing for a channel right now.';
+      detail.textContent = 'No access points were heard in the last hour. When they appear, the busiest channel shows up here.';
+      return;
+    }
+
+    var n = peakEntry.ap_count, ch = peakEntry.channel;
+    claim.textContent = '';
+    claim.appendChild(document.createTextNode(n + (n === 1 ? ' access point is' : ' access points are') + ' sharing '));
+    var em = document.createElement('em');
+    em.textContent = 'channel ' + ch;
+    claim.appendChild(em);
+    claim.appendChild(document.createTextNode('. That is the one to leave.'));
+
+    var others = channels
+      .filter(function(c){ return c.channel !== ch && c.ap_count > 0; })
+      .sort(function(a,b){ return a.ap_count - b.ap_count; });
+    var quietest = others[0];
+    detail.textContent = quietest
+      ? 'Channel ' + ch + ' carries ' + n + ' routers. Channel ' + quietest.channel + ' carries only ' +
+        quietest.ap_count + '. If your own router is on ' + ch + ', moving it to ' +
+        quietest.channel + ' is the cheapest fix available to you today.'
+      : 'Channel ' + ch + ' carries ' + n + ' routers — the busiest of the ' + apCount +
+        ' heard in the last hour.';
+  }
+
+  function setConn(up){
+    document.body.dataset.conn = up ? 'up' : 'down';
+    $('dot').className = 'dot' + (up ? '' : ' down');
+    $('conn-label').textContent = up ? 'Live' : 'Reconnecting';
+  }
+
+  setInterval(function(){
+    if (lastScanAt == null) { $('last-scan').textContent = '—'; return; }
+    var s = Math.max(0, Math.round((Date.now() - lastScanAt) / 1000));
+    $('last-scan').textContent = ago(s) + ' ago';
+  }, 1000);
+
+  var loadedOnce = false;
+
+  async function loadAll(){
+    try {
+      var res = await Promise.all([
+        getJSON('/api/v1/aps?window=15m&sort=signal&limit=50'),
+        getJSON('/api/v1/channels?window=1h'),
+        getJSON('/api/v1/devices?window=24h')
+      ]);
+      var aps = res[0].data || [];
+      var channels = res[1].data || [];
+      var devices = res[2].data || {};
+
+      renderChannels(channels);
+      var apCount = renderAps(aps);
+      renderMacs(devices);
+      renderClaim(channels, apCount);
+
+      if (aps.length) {
+        var minAge = Math.min.apply(null, aps.map(function(a){ return a.age_s; }));
+        lastScanAt = Date.now() - minAge * 1000;
+      }
+
+      var hasData = aps.length > 0 || (devices.total_unique && devices.total_unique > 0);
+      document.body.dataset.view = hasData ? 'live' : 'empty';
+      setConn(true);
+      loadedOnce = true;
+    } catch (err) {
+      setConn(false);
+      if (!loadedOnce) document.body.dataset.view = 'empty';
+      console.warn('[arsywatch] load failed:', err.message);
+    }
+  }
+
+  function connectSse(){
+    if (!window.EventSource) return;
+    var es = new EventSource('/api/v1/events');
+
+    es.addEventListener('hello', function(e){
+      setConn(true);
+      try {
+        var d = JSON.parse(e.data);
+        if (d.last_scan_id != null && lastScanAt == null) lastScanAt = Date.now();
+      } catch (_) {}
+    });
+
+    es.addEventListener('scan', function(){
+      lastScanAt = Date.now();
+      setConn(true);
+      loadAll();
+    });
+
+    es.addEventListener('heartbeat', function(){ setConn(true); });
+    es.onerror = function(){ setConn(false); };
+  }
+
+  loadAll();
+  connectSse();
+  setInterval(loadAll, POLL_MS);
+})();
+</script>
+</body>
+</html>
