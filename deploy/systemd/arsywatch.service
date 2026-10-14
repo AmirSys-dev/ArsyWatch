@@ -1,0 +1,40 @@
+[Unit]
+Description=ArsyWatch WiFi Monitor Server (Express + SQLite)
+Documentation=https://github.com/AmirSys-dev/ArsyWatch
+After=network.target
+
+[Service]
+Type=simple
+User=arsywatch
+Group=arsywatch
+WorkingDirectory=/opt/arsywatch/server
+EnvironmentFile=/opt/arsywatch/server/.env
+
+# Port 8787 supaya port 80/443 tinggal untuk nginx
+Environment=PORT=8787
+Environment=HOST=127.0.0.1
+Environment=NODE_ENV=production
+Environment=DB_PATH=/var/lib/arsywatch/arsywatch.db
+
+ExecStart=/usr/bin/node src/index.js
+Restart=always
+RestartSec=5s
+
+# Had keselamatan
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/arsywatch
+PrivateTmp=true
+
+# Had memori (VPS 1GB — bunuh proses kalau bocor melepasi 256MB)
+MemoryMax=256M
+MemoryHigh=200M
+
+# Log pergi ke journald: journalctl -u arsywatch -f
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=arsywatch
+
+[Install]
+WantedBy=multi-user.target

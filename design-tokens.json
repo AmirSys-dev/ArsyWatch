@@ -1,0 +1,45 @@
+{
+  "$schema": "https://example.com/design-tokens.schema.json",
+  "name": "ArsyWatch",
+  "version": "1.0.0",
+  "reference": "https://endspeciesism.org",
+  "color": {
+    "bg": {
+      "1": { "hsl": "115 7% 100%", "hex": "#FFFFFF", "role": "main background" },
+      "2": { "hsl": "115 7% 68%", "hex": "#A9B3A8", "role": "secondary surface" },
+      "3": { "hsl": "115 7% 50%", "hex": "#788877", "role": "strong border / inactive" }
+    },
+    "fg": {
+      "1": { "hsl": "115 7% 11%", "hex": "#1A1E1A", "role": "primary text" },
+      "2": { "hsl": "115 7% 41%", "hex": "#627061", "role": "secondary text" },
+      "3": { "hsl": "115 7% 60%", "hex": "#93A092", "role": "muted text" }
+    },
+    "accent": {
+      "1": { "hsl": "28 93% 55%", "hex": "#F78522", "role": "primary accent" },
+      "2": { "hsl": "28 93% 42%", "hex": "#CF6408", "role": "accent hover / warn" },
+      "3": { "hsl": "28 93% 32%", "hex": "#9D4D06", "role": "accent text on light" }
+    },
+    "semantic": {
+      "success": { "hsl": "115 35% 34%", "hex": "#395F38" },
+      "warn": { "hsl": "28 93% 42%", "hex": "#CF6408" },
+      "danger": { "hsl": "6 62% 45%", "hex": "#BA3A2E" },
+      "info": { "hsl": "200 30% 40%", "hex": "#476C82" }
+    }
+  },
+  "typography": {
+    "display": { "family": "Geist | Archivo (condensed)", "transform": "uppercase", "scale": ["2rem", "3rem"] },
+    "ui": { "family": "Geist", "scale": ["0.75rem", "0.875rem", "1rem", "1.25rem", "1.5rem", "2rem"] },
+    "mono": { "family": "Geist Mono | Space Mono", "numeric": "tabular-nums" }
+  },
+  "spacing": {
+    "scale": [4, 8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96],
+    "padding": "clamp(1rem, 4vw, 2rem)",
+    "container": "min(1440px, 100%)"
+  },
+  "radius": { "sm": 6, "base": 20, "lg": 28 },
+  "motion": {
+    "easeOutQuint": "cubic-bezier(0.22, 1, 0.36, 1)",
+    "easeInOutQuint": "cubic-bezier(0.83, 0, 0.17, 1)",
+    "duration": { "fast": "150ms", "base": "300ms", "slow": "500ms" }
+  }
+}

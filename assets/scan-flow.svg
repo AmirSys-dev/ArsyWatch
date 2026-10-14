@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 360" role="img" aria-labelledby="ttl desc" width="1000" height="360">
+  <title id="ttl">How ArsyWatch works</title>
+  <desc id="desc">An ESP8266 chip listens to nearby WiFi access points and probe requests, posts the counts to a server every 30 seconds, and the server pushes them live to a browser dashboard.</desc>
+
+  <style><![CDATA[
+    .bg{fill:#FFFFFF}
+    .card{fill:#FFFFFF;stroke:rgba(120,136,119,.45);stroke-width:1.5}
+    .wire{fill:none;stroke:rgba(120,136,119,.55);stroke-width:1.5}
+    .head{font:600 15px ui-sans-serif,system-ui,"Segoe UI",sans-serif;fill:#1A1E1A}
+    .note{font:400 12.5px ui-sans-serif,system-ui,"Segoe UI",sans-serif;fill:#627061}
+    .tag{font:600 10.5px ui-monospace,"Cascadia Mono",monospace;fill:#627061;letter-spacing:.08em}
+    .num{font:400 11px ui-monospace,"Cascadia Mono",monospace;fill:#627061;font-variant-numeric:tabular-nums}
+
+    /* Signal rings radiating from each access point. Origin sits at the AP centre
+       because the parent group is already translated there. */
+    .ring{fill:none;stroke:#93A092;stroke-width:1.25;transform-origin:0 0;
+          animation:ping 2.6s cubic-bezier(.22,1,.36,1) infinite}
+    .r2{animation-delay:.65s}
+    .r3{animation-delay:1.3s}
+    @keyframes ping{
+      0%{opacity:.85;transform:scale(.45)}
+      70%{opacity:.18}
+      100%{opacity:0;transform:scale(1.75)}
+    }
+
+    /* A packet moving along each hop. */
+    .packet{fill:#F78522;animation:travel 3s cubic-bezier(.22,1,.36,1) infinite}
+    .p2{animation-delay:1.5s}
+    @keyframes travel{
+      0%{transform:translateX(0);opacity:0}
+      12%{opacity:1}
+      82%{opacity:1}
+      100%{transform:translateX(150px);opacity:0}
+    }
+
+    /* The channel-hop bar: the chip sweeps channels 1 to 13, then repeats. */
+    .sweep{fill:#F78522;animation:sweep 4s cubic-bezier(.65,0,.35,1) infinite}
+    @keyframes sweep{
+      0%{transform:translateX(0)}
+      92%{transform:translateX(96px)}
+      100%{transform:translateX(0);opacity:0}
+    }
+
+    .live{fill:#395F38;animation:blink 2s ease-in-out infinite}
+    @keyframes blink{0%,100%{opacity:1}50%{opacity:.25}}
+
+    @media (prefers-reduced-motion:reduce){
+      .ring,.packet,.sweep,.live{animation:none}
+      .ring{opacity:.25}
+      .packet{opacity:1}
+    }
+  ]]></style>
+
+  <rect class="bg" width="1000" height="360"/>
+
+  <!-- Stage 1: the air around the house -->
+  <text class="tag" x="32" y="34">01 · THE AIR AROUND YOU</text>
+  <text class="note" x="32" y="54">2.4 GHz only. Beacons name the routers, probes count the devices.</text>
+
+  <g transform="translate(70,170)">
+    <circle class="ring" r="26"/><circle class="ring r2" r="26"/><circle class="ring r3" r="26"/>
+    <circle r="4" fill="#627061"/>
+    <text class="num" x="-58" y="-34">ch 1</text>
+  </g>
+  <g transform="translate(140,105)">
+    <circle class="ring" r="26"/><circle class="ring r2" r="26"/><circle class="ring r3" r="26"/>
+    <circle r="4" fill="#627061"/>
+    <text class="num" x="-58" y="-34">ch 6</text>
+  </g>
+  <g transform="translate(150,240)">
+    <circle class="ring" r="26"/><circle class="ring r2" r="26"/><circle class="ring r3" r="26"/>
+    <circle r="4" fill="#627061"/>
+    <text class="num" x="-58" y="48">ch 11</text>
+  </g>
+
+  <!-- Stage 2: the chip -->
+  <rect class="card" x="268" y="112" width="196" height="136" rx="20"/>
+  <text class="head" x="288" y="146">ESP8266</text>
+  <text class="note" x="288" y="168">on your desk</text>
+  <rect x="288" y="190" width="156" height="6" rx="3" fill="rgba(120,136,119,.22)"/>
+  <rect class="sweep" x="288" y="190" width="60" height="6" rx="3"/>
+  <text class="num" x="288" y="222">hopping 1 .. 13 · 300 ms each</text>
+
+  <!-- Stage 3: the server -->
+  <rect class="card" x="544" y="96" width="212" height="168" rx="20"/>
+  <text class="head" x="564" y="130">Your VPS</text>
+  <text class="note" x="564" y="154">nginx · Node · SQLite</text>
+  <line class="wire" x1="564" y1="172" x2="736" y2="172"/>
+  <text class="note" x="564" y="196">stores counts</text>
+  <text class="note" x="564" y="216">prunes after 7 days</text>
+  <text class="note" x="564" y="236">hashes every MAC</text>
+
+  <!-- Stage 4: the browser -->
+  <rect class="card" x="836" y="112" width="136" height="136" rx="20"/>
+  <circle class="live" cx="866" cy="144" r="5"/>
+  <text class="head" x="880" y="149">Live</text>
+  <text class="note" x="856" y="180">the page</text>
+  <text class="note" x="856" y="200">updates itself</text>
+  <text class="note" x="856" y="220">no reload</text>
+
+  <!-- Wires and moving packets -->
+  <path class="wire" d="M196 180 H 268" marker-end="url(#arw)"/>
+  <path class="wire" d="M464 180 H 544" marker-end="url(#arw)"/>
+  <path class="wire" d="M756 180 H 836" marker-end="url(#arw)"/>
+
+  <circle class="packet" cx="480" cy="180" r="5"/>
+  <circle class="packet p2" cx="770" cy="180" r="5"/>
+
+  <text class="tag" x="486" y="166">POST /ingest · 30 s</text>
+  <text class="tag" x="770" y="166">SSE</text>
+
+  <defs>
+    <marker id="arw" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 1 L9 5 L0 9 z" fill="rgba(120,136,119,.75)"/>
+    </marker>
+  </defs>
+
+  <line class="wire" x1="32" y1="308" x2="968" y2="308" stroke-dasharray="3 5" stroke-width="1"/>
+  <text class="note" x="32" y="332">Nothing about a device is kept except a salted hash and a count. No sites, no content, no payloads.</text>
+</svg>

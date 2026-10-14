@@ -1,0 +1,8 @@
+# graphify ignore rules (gitignore syntax).
+# The vault is graphify's OWN export of this repo. Indexing it back into the graph
+# is circular: every source file would appear twice, once real and once as a
+# derived note. Keep the graph pointing at source only.
+vault/
+
+# Rebuildable graph output.
+graphify-out/

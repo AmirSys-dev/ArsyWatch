@@ -1,0 +1,30 @@
+node_modules/
+.env
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+dist/
+.next/
+out/
+.DS_Store
+
+# Firmware secrets — the real header holds wifi credentials, the device token,
+# and the pinned certificate fingerprint. Only the example belongs in git.
+firmware/**/secrets.h
+firmware/**/include/secrets.h
+
+# PlatformIO build output
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# graphify generated graph (rebuildable; the report is what matters)
+graphify-out/
+
+# graphify Obsidian vault — the generated notes are rebuildable
+# (graphify export obsidian --dir ./vault), so ignore everything at the top
+# level EXCEPT vault/logs/, which holds the hand-written devlogs (a Stardance
+# deliverable and therefore tracked in git).
+vault/*
+!vault/logs/

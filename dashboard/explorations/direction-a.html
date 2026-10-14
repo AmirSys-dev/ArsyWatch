@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>ArsyWatch - Direction A - Operations Console</title>
+<style>
+  :root{
+    --bg-1:#FFFFFF; --bg-2:#A9B3A8; --bg-3:#788877;
+    --fg-1:#1A1E1A; --fg-2:#627061; --fg-3:#93A092;
+    --accent-1:#F78522; --accent-2:#CF6408; --accent-3:#9D4D06;
+    --success:#395F38; --danger:#BA3A2E; --info:#476C82;
+    --rule: color-mix(in srgb, var(--bg-3) 30%, transparent);
+    --rule-soft: color-mix(in srgb, var(--bg-3) 16%, transparent);
+    --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", "Noto Sans", sans-serif;
+    --font-mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+    --r-sm:6px; --r:20px; --r-lg:28px;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-quint: cubic-bezier(0.22, 1, 0.36, 1);
+    --pad: clamp(1rem, 3vw, 1.5rem);
+  }
+  *{box-sizing:border-box;margin:0}
+  html{-webkit-font-smoothing:antialiased;text-size-adjust:100%}
+  body{
+    background:var(--bg-1); color:var(--fg-1);
+    font-family:var(--font-ui); font-size:14px; line-height:1.45;
+    padding:var(--pad);
+  }
+  .wrap{max-width:1120px;margin:0 auto}
+  .mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+
+  /* ---- top bar ---- */
+  .top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:baseline;justify-content:space-between;
+       border-bottom:1px solid var(--rule);padding-bottom:14px;margin-bottom:16px}
+  .brand{display:flex;align-items:baseline;gap:12px}
+  .brand h1{font-size:clamp(1.35rem,2.4vw,1.9rem);text-transform:uppercase;letter-spacing:-0.02em;
+            line-height:1;font-weight:700}
+  .brand .sub{color:var(--fg-2);font-size:12px;letter-spacing:.02em}
+  .status{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--fg-2)}
+  .live-dot{position:relative;width:9px;height:9px;border-radius:50%;background:var(--success);flex:none}
+  .live-dot::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--success);opacity:.5}
+  .status .label{color:var(--fg-1);font-weight:600;letter-spacing:.04em;text-transform:uppercase;font-size:11px}
+
+  @media (prefers-reduced-motion: no-preference){
+    .live-dot::after{animation:halo 2.4s var(--ease-quint) infinite}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .live-dot::after{animation:fade 4s ease-in-out infinite}
+  }
+  @keyframes halo{
+    0%{transform:scale(1);opacity:.55}
+    70%{transform:scale(2.6);opacity:0}
+    100%{transform:scale(2.6);opacity:0}
+  }
+  @keyframes fade{0%,100%{opacity:.5}50%{opacity:.12}}
+
+  /* ---- stat strip: one row, dividers, no cards ---- */
+  .strip{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--rule);
+         border-radius:var(--r);overflow:hidden;margin-bottom:16px}
+  .cell{padding:14px 16px;border-left:1px solid var(--rule-soft)}
+  .cell:first-child{border-left:0}
+  .cell .k{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--fg-2);margin-bottom:6px}
+  .cell .v{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:26px;line-height:1;letter-spacing:-0.01em}
+  .cell .u{font-size:12px;color:var(--fg-2);margin-left:5px;font-family:var(--font-ui);letter-spacing:0}
+  .cell .v.is-accent{color:var(--accent-3)}
+  @media (max-width:720px){
+    .strip{grid-template-columns:repeat(2,1fr)}
+    .cell:nth-child(3){border-left:0}
+    .cell:nth-child(n+3){border-top:1px solid var(--rule-soft)}
+  }
+
+  /* ---- panels ---- */
+  .panel{border:1px solid var(--rule);border-radius:var(--r);margin-bottom:16px}
+  .panel > .hd{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;justify-content:space-between;
+               padding:12px 16px;border-bottom:1px solid var(--rule-soft)}
+  .panel .hd h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;font-weight:600;color:var(--fg-1)}
+  .panel .hd .note{font-size:11px;color:var(--fg-2);letter-spacing:.01em}
+  .panel .body{padding:16px}
+
+  /* ---- channel chart ---- */
+  .chart{position:relative;display:flex;align-items:flex-end;gap:5px;height:150px;
+         padding-bottom:22px;border-bottom:1px solid var(--rule)}
+  .bar{position:relative;flex:1;background:var(--bg-2);border-radius:5px 5px 0 0;min-height:3px;
+       transition-property:background-color,transform;transition-duration:150ms;transition-timing-function:var(--ease-out)}
+  .bar.peak{background:var(--accent-1)}
+  .bar .cap{position:absolute;left:0;right:0;top:-19px;text-align:center;font-size:11px;
+            font-family:var(--font-mono);font-variant-numeric:tabular-nums;color:var(--fg-1)}
+  .bar.zero .cap{color:var(--fg-3)}
+  .chlabels{display:flex;gap:5px;margin-top:6px}
+  .chlabels span{flex:1;text-align:center;font-size:11px;font-family:var(--font-mono);
+                 font-variant-numeric:tabular-nums;color:var(--fg-2)}
+  .chlabels span.is-peak{color:var(--accent-3);font-weight:700}
+  .thresh{position:absolute;left:0;right:0;border-top:1px dashed color-mix(in srgb,var(--danger) 45%,transparent)}
+  .thresh span{position:absolute;right:0;top:-16px;font-size:10px;color:var(--danger);letter-spacing:.02em}
+  @media (hover:hover) and (pointer:fine){
+    .bar:hover{background:var(--accent-2)}
+    .bar.peak:hover{background:var(--accent-2)}
+  }
+
+  /* ---- AP table ---- */
+  .tbl-scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  thead th{position:sticky;top:0;background:var(--bg-1);z-index:1;
+           text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.07em;
+           color:var(--fg-2);font-weight:600;padding:9px 10px;border-bottom:1px solid var(--rule);white-space:nowrap}
+  tbody td{padding:8px 10px;border-bottom:1px solid var(--rule-soft);vertical-align:middle}
+  tbody tr:last-child td{border-bottom:0}
+  .num{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+  .ssid{font-weight:600}
+  .ssid .hidden-tag{font-weight:400;color:var(--fg-2);font-style:italic}
+  .bssid{color:var(--fg-2);letter-spacing:.02em}
+  .rssi{position:relative;padding-left:26px}
+  .rssi::before{content:"";position:absolute;left:10px;top:50%;transform:translateY(-50%);
+                width:8px;height:8px;border-radius:50%;background:var(--bg-3)}
+  .rssi.s-strong::before{background:var(--success)}
+  .rssi.s-mid::before{background:var(--warn,var(--accent-2))}
+  .rssi.s-weak::before{background:var(--danger)}
+  .pill{display:inline-block;font-size:10px;letter-spacing:.05em;text-transform:uppercase;
+        padding:2px 7px;border-radius:999px;border:1px solid var(--rule);color:var(--fg-2);
+        font-family:var(--font-ui)}
+  .pill.wpa3{color:var(--success);border-color:color-mix(in srgb,var(--success) 40%,transparent)}
+  .pill.open{color:var(--danger);border-color:color-mix(in srgb,var(--danger) 40%,transparent)}
+  tr.stale{color:var(--fg-3)}
+  tr.stale .ssid{font-weight:500}
+  .stale-flag{font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--fg-2);
+              border:1px solid var(--rule);border-radius:var(--r-sm);padding:1px 6px}
+  @media (hover:hover) and (pointer:fine){
+    tbody tr:hover td{background:color-mix(in srgb,var(--bg-2) 22%,transparent)}
+  }
+
+  /* ---- 24h mac strip ---- */
+  .macwrap{display:grid;grid-template-columns:1fr auto;gap:20px;align-items:end}
+  .macbars{display:flex;align-items:flex-end;gap:2px;height:88px;border-bottom:1px solid var(--rule)}
+  .mb{flex:1;background:color-mix(in srgb,var(--bg-2) 70%,transparent);border-radius:3px 3px 0 0;min-height:2px;
+      transition-property:background-color;transition-duration:150ms;transition-timing-function:var(--ease-out)}
+  .mb.peak{background:var(--accent-1)}
+  @media (hover:hover) and (pointer:fine){ .mb:hover{background:var(--accent-2)} }
+  .machours{display:flex;gap:2px;margin-top:6px}
+  .machours span{flex:1;text-align:center;font-size:9px;font-family:var(--font-mono);color:var(--fg-3)}
+  .machours span.tick{color:var(--fg-2)}
+  .macside{text-align:right;min-width:150px}
+  .macside .big{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:40px;line-height:1;letter-spacing:-0.02em}
+  .macside .cap{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--fg-2);margin-bottom:4px}
+  .macside .peak{font-size:11px;color:var(--fg-2);margin-top:8px}
+  .caveat{margin-top:14px;padding:10px 12px;border:1px solid var(--rule);border-radius:var(--r-sm);
+          font-size:12px;color:var(--fg-2);display:flex;gap:9px;align-items:flex-start}
+  .caveat .mk{flex:none;width:14px;height:14px;border-radius:50%;border:1px solid var(--fg-3);
+              color:var(--fg-2);font-size:10px;line-height:12px;text-align:center;margin-top:1px}
+  footer{margin-top:20px;padding-top:12px;border-top:1px solid var(--rule);
+         display:flex;flex-wrap:wrap;gap:6px 20px;justify-content:space-between;
+         font-size:11px;color:var(--fg-2);letter-spacing:.02em}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand">
+      <h1>ArsyWatch</h1>
+      <span class="sub">arsywatch-01 &middot; 2.4 GHz &middot; ch 1-14</span>
+    </div>
+    <div class="status">
+      <span class="live-dot" aria-hidden="true"></span>
+      <span class="label">Live</span>
+      <span>last scan <span class="mono" id="lastscan">2</span>s ago</span>
+      <span>&middot;</span>
+      <span>updated <span class="mono" id="clock">12:00:32</span> UTC</span>
+    </div>
+  </header>
+
+  <!-- stat strip: one row, dividers, not four cards -->
+  <section class="strip" aria-label="Current summary">
+    <div class="cell">
+      <div class="k">Access points</div>
+      <div class="v">12<span class="u">seen / 15m</span></div>
+    </div>
+    <div class="cell">
+      <div class="k">Peak channel</div>
+      <div class="v is-accent">6<span class="u">5 APs / 1h</span></div>
+    </div>
+    <div class="cell">
+      <div class="k">Unique MACs</div>
+      <div class="v">214<span class="u">/ 24h</span></div>
+    </div>
+    <div class="cell">
+      <div class="k">Strongest</div>
+      <div class="v">&minus;48<span class="u">dBm</span></div>
+    </div>
+  </section>
+
+  <!-- channel congestion -->
+  <section class="panel" aria-label="Channel congestion">
+    <div class="hd">
+      <h2>Channel congestion</h2>
+      <span class="note">APs per channel &middot; window 1h &middot; threshold 5 APs</span>
+    </div>
+    <div class="body">
+      <div class="chart" id="chart" role="img"
+           aria-label="Bar chart of access points per channel, channel 6 is the peak with 5 access points">
+        <div class="thresh" style="bottom:calc(22px + 5/6 * 128px)"><span>threshold 5</span></div>
+        <!-- bars injected by script -->
+      </div>
+      <div class="chlabels" id="chlabels"></div>
+    </div>
+  </section>
+
+  <!-- AP table -->
+  <section class="panel" aria-label="Access point table">
+    <div class="hd">
+      <h2>Access points</h2>
+      <span class="note">sorted by signal &middot; window 15m &middot; stale after 90s</span>
+    </div>
+    <div class="tbl-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">SSID</th>
+            <th scope="col">BSSID</th>
+            <th scope="col">Ch</th>
+            <th scope="col">RSSI</th>
+            <th scope="col">Enc</th>
+            <th scope="col">Last seen</th>
+          </tr>
+        </thead>
+        <tbody id="aprows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 24h unique MAC -->
+  <section class="panel" aria-label="Unique MAC addresses, 24 hours">
+    <div class="hd">
+      <h2>Unique MACs &middot; 24h</h2>
+      <span class="note">hourly buckets &middot; peak 21:00</span>
+    </div>
+    <div class="body">
+      <div class="macwrap">
+        <div>
+          <div class="macbars" id="macbars" role="img"
+               aria-label="Hourly bar chart of unique MAC addresses over 24 hours, quiet at night, peaking at 63 in the 21:00 hour"></div>
+          <div class="machours" id="machours"></div>
+        </div>
+        <div class="macside">
+          <div class="cap">Total unique</div>
+          <div class="big">214</div>
+          <div class="peak">Peak hour 21:00 &middot; <span class="mono">63</span></div>
+        </div>
+      </div>
+      <p class="caveat">
+        <span class="mk" aria-hidden="true">i</span>
+        <span>Counts unique MAC addresses, not people. iOS and Android rotate their MAC
+        roughly every 15 minutes, so one phone can register as several. Treat this as
+        activity in the air, not a headcount.</span>
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    <span>Read-only public view. Write controls live at /admin behind auth.</span>
+    <span class="mono">/api/v1/aps &middot; /channels &middot; /devices &middot; SSE /events</span>
+  </footer>
+</div>
+
+<script>
+  /* ---- realistic dataset (matches server/scripts/seed-demo.js cast) ---- */
+  const APS = [
+    {ssid:"HomeNet",        bssid:"A4:2B:8C:91:F3:0F", ch:6,  rssi:-48, enc:"wpa2", age:2},
+    {ssid:"HomeNet_2G",     bssid:"A4:2B:8C:91:F3:10", ch:11, rssi:-55, enc:"wpa2", age:4},
+    {ssid:"Klinik_WiFi",    bssid:"C0:56:27:1A:9E:44", ch:6,  rssi:-66, enc:"wpa2", age:6},
+    {ssid:"",               bssid:"9E:04:1B:77:20:03", ch:1,  rssi:-69, enc:"wpa3", age:8},
+    {ssid:"D'House_Guest",  bssid:"F4:8E:38:0B:22:71", ch:9,  rssi:-71, enc:"wpa2", age:11},
+    {ssid:"NeighbourWiFi",  bssid:"7C:10:C9:02:44:AB", ch:6,  rssi:-74, enc:"wpa2", age:13},
+    {ssid:"Milo_Hotspot",   bssid:"34:60:F9:AA:1C:07", ch:13, rssi:-77, enc:"wpa2", age:16},
+    {ssid:"DIRECT-3f-HPDesk",bssid:"06:18:D6:9C:41:2B",ch:6,  rssi:-79, enc:"wpa2", age:19},
+    {ssid:"TP-Link_4F2A",   bssid:"B0:4E:26:4F:2A:11", ch:1,  rssi:-80, enc:"wpa2", age:24},
+    {ssid:"xfinitywifi",    bssid:"7C:10:C9:02:44:AC", ch:11, rssi:-83, enc:"open", age:31},
+    {ssid:"Samsung_Printer",bssid:"8C:79:F5:2D:66:0A", ch:11, rssi:-88, enc:"wpa2", age:44},
+    {ssid:"rumah_tamu",     bssid:"E8:DE:27:5B:11:C2", ch:1,  rssi:-91, enc:"wpa2", age:124}
+  ];
+
+  /* channel counts over the 1h window (can exceed the 15m snapshot) */
+  const CH = [3,0,1,0,0,5,0,1,1,0,3,0,1,0];
+  const THRESHOLD = 5, STALE_AFTER = 90;
+
+  /* 24h hourly unique-MAC buckets, quiet night, busy evening */
+  const MACS = [3,2,1,1,2,4,9,18,27,22,19,21,24,26,23,25,29,34,41,48,56,63,51,30];
+
+  /* ---------- channel chart ---------- */
+  const chart = document.getElementById('chart');
+  const labels = document.getElementById('chlabels');
+  const max = Math.max(...CH, THRESHOLD) + 1;      // headroom above threshold
+  const H = 128;                                    // usable bar area (px)
+  CH.forEach((n,i)=>{
+    const ch = i+1, isPeak = n === Math.max(...CH) && n > 0;
+    const b = document.createElement('div');
+    b.className = 'bar' + (isPeak ? ' peak' : '') + (n===0 ? ' zero' : '');
+    b.style.height = (n===0 ? 3 : Math.max(3, Math.round(n/max*H))) + 'px';
+    b.title = 'Channel '+ch+' - '+n+' AP'+(n===1?'':'s');
+    b.innerHTML = '<span class="cap">'+n+'</span>';
+    chart.insertBefore(b, chart.querySelector('.thresh'));
+    const l = document.createElement('span');
+    l.textContent = ch;
+    if(isPeak) l.className='is-peak';
+    labels.appendChild(l);
+  });
+
+  /* ---------- AP table ---------- */
+  const rows = document.getElementById('aprows');
+  const band = r => r >= -60 ? 's-strong' : r >= -75 ? 's-mid' : 's-weak';
+  const ago  = s => s < 60 ? s+'s' : Math.floor(s/60)+'m '+(s%60)+'s';
+  APS.slice().sort((a,b)=>b.rssi-a.rssi).forEach(ap=>{
+    const stale = ap.age > STALE_AFTER;
+    const tr = document.createElement('tr');
+    if(stale) tr.className = 'stale';
+    tr.innerHTML =
+      '<td class="ssid">'+(ap.ssid === ''
+          ? '<span class="hidden-tag">hidden network</span>'
+          : escapeHtml(ap.ssid))+'</td>'+
+      '<td class="bssid num">'+ap.bssid+'</td>'+
+      '<td class="num">'+ap.ch+'</td>'+
+      '<td class="num rssi '+band(ap.rssi)+'">'+ap.rssi+' <span style="color:var(--fg-3)">dBm</span></td>'+
+      '<td><span class="pill '+(ap.enc==='open'?'open':ap.enc==='wpa3'?'wpa3':'')+'">'+ap.enc+'</span></td>'+
+      '<td class="num">'+ago(ap.age)+(stale?' <span class="stale-flag">missing</span>':'')+'</td>';
+    rows.appendChild(tr);
+  });
+
+  /* ---------- 24h mac strip ---------- */
+  const mb = document.getElementById('macbars');
+  const mh = document.getElementById('machours');
+  const mmax = Math.max(...MACS);
+  MACS.forEach((n,i)=>{
+    const d = document.createElement('div');
+    d.className = 'mb' + (n===mmax ? ' peak' : '');
+    d.style.height = Math.max(2, Math.round(n/mmax*86)) + 'px';
+    d.title = String(i).padStart(2,'0')+':00 - '+n+' unique';
+    mb.appendChild(d);
+    const s = document.createElement('span');
+    if(i%6===0){ s.textContent = String(i).padStart(2,'0'); s.className='tick'; }
+    mh.appendChild(s);
+  });
+
+  /* ---------- live ticker: ages advance, clock moves ---------- */
+  let lastScan = 2;
+  const tick = () => {
+    lastScan = (lastScan + 1) % 31;
+    document.getElementById('lastscan').textContent = lastScan;
+    const d = new Date();
+    document.getElementById('clock').textContent =
+      String(d.getUTCHours()).padStart(2,'0')+':'+
+      String(d.getUTCMinutes()).padStart(2,'0')+':'+
+      String(d.getUTCSeconds()).padStart(2,'0');
+  };
+  tick();
+  const timer = setInterval(tick, 1000);
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden) clearInterval(timer);
+  });
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+</script>
+</body>
+</html>

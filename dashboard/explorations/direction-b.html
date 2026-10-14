@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>ArsyWatch - Direction B - Bento, One Dominant Number</title>
+<style>
+  :root{
+    --bg-1:#FFFFFF; --bg-2:#A9B3A8; --bg-3:#788877;
+    --fg-1:#1A1E1A; --fg-2:#627061; --fg-3:#93A092;
+    --accent-1:#F78522; --accent-2:#CF6408; --accent-3:#9D4D06;
+    --success:#395F38; --danger:#BA3A2E; --info:#476C82;
+    --rule: color-mix(in srgb, var(--bg-3) 28%, transparent);
+    --rule-soft: color-mix(in srgb, var(--bg-3) 14%, transparent);
+    --wash: color-mix(in srgb, var(--bg-2) 12%, transparent);
+    --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", "Noto Sans", sans-serif;
+    --font-mono: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+    --r-sm:6px; --r:20px; --r-lg:28px;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    --ease-quint: cubic-bezier(0.22, 1, 0.36, 1);
+    --pad: clamp(1rem, 3.2vw, 2rem);
+  }
+  *{box-sizing:border-box;margin:0}
+  html{-webkit-font-smoothing:antialiased;text-size-adjust:100%}
+  body{background:var(--bg-1);color:var(--fg-1);font-family:var(--font-ui);
+       font-size:14px;line-height:1.45;padding:var(--pad)}
+  .wrap{max-width:1280px;margin:0 auto}
+  .mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+  .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--fg-2);font-weight:600}
+
+  /* masthead: brand left, live right, thin rule */
+  .mast{display:flex;flex-wrap:wrap;gap:10px 24px;align-items:baseline;justify-content:space-between;
+        margin-bottom:18px}
+  .mast h1{font-size:clamp(1.4rem,2.6vw,2rem);text-transform:uppercase;letter-spacing:-0.02em;
+           font-weight:800;line-height:1}
+  .mast .meta{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--fg-2)}
+  .dot{position:relative;width:9px;height:9px;border-radius:50%;background:var(--success);flex:none}
+  .dot::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--success);opacity:.5}
+  @media (prefers-reduced-motion: no-preference){ .dot::after{animation:halo 2.4s var(--ease-quint) infinite} }
+  @media (prefers-reduced-motion: reduce){ .dot::after{animation:fade 4s ease-in-out infinite} }
+  @keyframes halo{0%{transform:scale(1);opacity:.55}70%{transform:scale(2.6);opacity:0}100%{transform:scale(2.6);opacity:0}}
+  @keyframes fade{0%,100%{opacity:.5}50%{opacity:.12}}
+  .mast .label{color:var(--fg-1);font-weight:600;text-transform:uppercase;letter-spacing:.05em;font-size:11px}
+
+  /* bento: 4 cols x 3 rows, deliberate asymmetry.
+     hero spans 2x2, facts stack beside it, AP list owns the tall right column. */
+  .bento{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));
+         grid-template-rows:minmax(96px,auto) minmax(96px,auto) minmax(96px,auto);gap:14px}
+  .tile{border:1px solid var(--rule);border-radius:var(--r);padding:18px;position:relative;
+        background:var(--bg-1);display:flex;flex-direction:column;min-width:0}
+  .tile .eyebrow{margin-bottom:auto}
+
+  /* the dominant tile */
+  .hero{grid-column:1 / span 2;grid-row:1 / span 2;padding:24px 26px;
+        display:grid;grid-template-rows:auto 1fr auto;gap:16px}
+  .hero .hint{font-size:13px;color:var(--fg-2);max-width:34ch}
+  .hero .figure{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .hero .figure .big{font-family:var(--font-mono);font-variant-numeric:tabular-nums;
+                     font-size:clamp(3.4rem,9vw,5.6rem);line-height:.86;letter-spacing:-0.03em;font-weight:600}
+  .hero .figure .unit{font-size:15px;color:var(--fg-2);letter-spacing:.02em}
+  .hero .figure .delta{font-size:13px;color:var(--accent-3);font-weight:600;
+                       border:1px solid color-mix(in srgb,var(--accent-1) 40%,transparent);
+                       border-radius:999px;padding:3px 10px;align-self:center}
+  .hero .foot{border-top:1px solid var(--rule-soft);padding-top:12px;
+              display:flex;flex-wrap:wrap;gap:4px 22px;font-size:12px;color:var(--fg-2)}
+
+  /* channel tile: wide, bottom-left */
+  .chans{grid-column:1 / span 2;grid-row:3 / span 1}
+  /* ap table tile: tall right column */
+  .aps{grid-column:4 / span 1;grid-row:1 / span 3;padding:0;overflow:hidden;
+       display:flex;flex-direction:column}
+  /* mac tile: middle-right, under the two facts */
+  .macs{grid-column:3 / span 1;grid-row:3 / span 1}
+  /* small facts, stacked in column 3 above macs */
+  .fact{grid-column:3 / span 1}
+  .f1{grid-row:1} .f2{grid-row:2}
+  .fact .v{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:30px;
+           line-height:1;margin-top:10px;letter-spacing:-0.02em}
+  .fact .v.acc{color:var(--accent-3)}
+  .fact .u{font-size:11px;color:var(--fg-2);margin-top:5px;font-family:var(--font-ui)}
+
+  /* channel bars inside tile */
+  .chart{display:flex;align-items:flex-end;gap:4px;height:104px;margin-top:16px;
+         border-bottom:1px solid var(--rule);padding-bottom:0}
+  .bar{position:relative;flex:1;background:var(--bg-2);border-radius:4px 4px 0 0;min-height:3px;
+       transition-property:background-color;transition-duration:150ms;transition-timing-function:var(--ease-out)}
+  .bar.peak{background:var(--accent-1)}
+  .bar .cap{position:absolute;left:0;right:0;top:-16px;text-align:center;font-size:10px;
+            font-family:var(--font-mono);color:var(--fg-2)}
+  .bar.peak .cap{color:var(--accent-3);font-weight:700}
+  .chlabels{display:flex;gap:4px;margin-top:5px}
+  .chlabels span{flex:1;text-align:center;font-size:10px;font-family:var(--font-mono);color:var(--fg-3)}
+  .chlabels span.is-peak{color:var(--accent-3);font-weight:700}
+  @media (hover:hover) and (pointer:fine){ .bar:hover{background:var(--accent-2)} }
+
+  /* mac tile: mini sparkline bars */
+  .spark{display:flex;align-items:flex-end;gap:2px;height:52px;margin-top:14px;
+         border-bottom:1px solid var(--rule-soft)}
+  .sb{flex:1;background:color-mix(in srgb,var(--bg-2) 70%,transparent);border-radius:2px 2px 0 0;min-height:2px;
+      transition-property:background-color;transition-duration:150ms;transition-timing-function:var(--ease-out)}
+  .sb.peak{background:var(--accent-1)}
+  .macnote{font-size:11px;color:var(--fg-2);margin-top:10px;line-height:1.4}
+
+  /* ap list inside the tall right tile */
+  .aps .hd{padding:16px 18px 12px;border-bottom:1px solid var(--rule-soft)}
+  .aps .hd h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;font-weight:700}
+  .aps .hd .note{font-size:11px;color:var(--fg-2);margin-top:3px}
+  .aplist{flex:1;overflow-y:auto;min-height:0}
+  .aprow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;
+         padding:9px 18px;border-bottom:1px solid var(--rule-soft)}
+  .aprow:last-child{border-bottom:0}
+  .aprow .nm{font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .aprow .nm .hidden-tag{font-weight:400;font-style:italic;color:var(--fg-2)}
+  .aprow .sig{font-family:var(--font-mono);font-variant-numeric:tabular-nums;font-size:13px;
+              text-align:right;display:flex;align-items:center;gap:6px;justify-content:flex-end}
+  .sigdot{width:7px;height:7px;border-radius:50%;flex:none;background:var(--bg-3)}
+  .sigdot.s-strong{background:var(--success)} .sigdot.s-mid{background:var(--accent-2)} .sigdot.s-weak{background:var(--danger)}
+  .aprow .sub{grid-column:1;font-size:11px;color:var(--fg-2);font-family:var(--font-mono);
+              display:flex;gap:9px;align-items:center}
+  .aprow .sub .ch{color:var(--fg-1)}
+  .aprow.stale .nm{font-weight:500;color:var(--fg-2)}
+  .aprow.stale .sig{color:var(--fg-3)}
+  @media (hover:hover) and (pointer:fine){
+    .aprow:hover{background:color-mix(in srgb,var(--bg-2) 20%,transparent)}
+  }
+
+  /* responsive: collapse to 2 then 1 column, clearing explicit placement */
+  @media (max-width:1000px){
+    .bento{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:none;grid-auto-rows:minmax(96px,auto)}
+    .hero,.chans,.aps,.macs,.fact{grid-column:auto;grid-row:auto}
+    .hero{grid-column:1 / span 2}
+    .chans{grid-column:1 / span 2}
+    .aps{grid-column:1 / span 2;max-height:none}
+    .aplist{max-height:420px}
+  }
+  @media (max-width:620px){
+    .bento{grid-template-columns:1fr}
+    .hero,.chans,.aps,.macs,.fact{grid-column:1 !important;grid-row:auto !important}
+  }
+  footer{margin-top:18px;padding-top:12px;border-top:1px solid var(--rule);
+         display:flex;flex-wrap:wrap;gap:6px 20px;justify-content:space-between;
+         font-size:11px;color:var(--fg-2)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="mast">
+    <h1>ArsyWatch</h1>
+    <div class="meta">
+      <span class="dot" aria-hidden="true"></span>
+      <span class="label">Live</span>
+      <span>last scan <span class="mono">2</span>s ago</span>
+      <span>&middot;</span>
+      <span>arsywatch-01 &middot; 2.4 GHz ch 1-14</span>
+    </div>
+  </header>
+
+  <div class="bento">
+
+    <!-- DOMINANT: peak channel -->
+    <section class="tile hero" aria-label="Peak channel, the primary metric">
+      <span class="eyebrow">Busiest channel &middot; window 1h</span>
+      <div>
+        <div class="figure">
+          <span class="big">6</span>
+          <span class="unit">channel</span>
+          <span class="delta">5 APs on it</span>
+        </div>
+        <p class="hint" style="margin-top:14px">Five access points are sharing channel 6.
+        Channels 1, 11 and 13 are quieter. Moving your router to 11 is the cheapest fix.</p>
+      </div>
+      <div class="foot">
+        <span>Threshold <span class="mono">5</span> APs</span>
+        <span>Total APs <span class="mono">12</span></span>
+        <span>Next quietest <span class="mono">11</span> (3 APs)</span>
+      </div>
+    </section>
+
+    <!-- small facts -->
+    <section class="tile fact f1" aria-label="Access points seen">
+      <span class="eyebrow">APs seen / 15m</span>
+      <div class="v">12</div>
+      <div class="u">2 missing (&gt; 90s)</div>
+    </section>
+    <section class="tile fact f2" aria-label="Strongest signal">
+      <span class="eyebrow">Strongest signal</span>
+      <div class="v acc">&minus;48</div>
+      <div class="u">dBm &middot; HomeNet</div>
+    </section>
+
+    <!-- 24h mac tile -->
+    <section class="tile macs" aria-label="Unique MAC addresses over 24 hours">
+      <span class="eyebrow">Unique MACs &middot; 24h</span>
+      <div class="v mono" style="font-size:34px;line-height:1;margin-top:10px;letter-spacing:-0.02em">214</div>
+      <div class="spark" id="spark" role="img"
+           aria-label="Hourly unique MAC counts over 24 hours, quiet overnight, peak of 63 in the 21:00 hour"></div>
+      <p class="macnote">Counts unique MACs, not people. Phone MAC rotation inflates this.</p>
+    </section>
+
+    <!-- channel congestion, wide -->
+    <section class="tile chans" aria-label="Channel congestion">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap">
+        <span class="eyebrow">Channel congestion &middot; APs per channel</span>
+        <span style="font-size:11px;color:var(--fg-2)">peak highlighted &middot; 1h window</span>
+      </div>
+      <div class="chart" id="chart" role="img"
+           aria-label="Access points per channel 1 to 14, channel 6 peaks at 5"></div>
+      <div class="chlabels" id="chlabels"></div>
+    </section>
+
+    <!-- AP table, tall right column -->
+    <section class="tile aps" aria-label="Access points, sorted by signal">
+      <div class="hd">
+        <h2>Access points</h2>
+        <div class="note">Sorted by signal &middot; 15m &middot; stale after 90s</div>
+      </div>
+      <div class="aplist" id="aplist"></div>
+    </section>
+
+  </div>
+
+  <footer>
+    <span>Read-only public view. Write controls at /admin behind auth.</span>
+    <span class="mono">SSE /api/v1/events</span>
+  </footer>
+</div>
+
+<script>
+  const APS = [
+    {ssid:"HomeNet",         bssid:"A4:2B:8C:91:F3:0F", ch:6,  rssi:-48, enc:"wpa2", age:2},
+    {ssid:"HomeNet_2G",      bssid:"A4:2B:8C:91:F3:10", ch:11, rssi:-55, enc:"wpa2", age:4},
+    {ssid:"Klinik_WiFi",     bssid:"C0:56:27:1A:9E:44", ch:6,  rssi:-66, enc:"wpa2", age:6},
+    {ssid:"",                bssid:"9E:04:1B:77:20:03", ch:1,  rssi:-69, enc:"wpa3", age:8},
+    {ssid:"D'House_Guest",   bssid:"F4:8E:38:0B:22:71", ch:9,  rssi:-71, enc:"wpa2", age:11},
+    {ssid:"NeighbourWiFi",   bssid:"7C:10:C9:02:44:AB", ch:6,  rssi:-74, enc:"wpa2", age:13},
+    {ssid:"Milo_Hotspot",    bssid:"34:60:F9:AA:1C:07", ch:13, rssi:-77, enc:"wpa2", age:16},
+    {ssid:"DIRECT-3f-HPDesk",bssid:"06:18:D6:9C:41:2B", ch:6,  rssi:-79, enc:"wpa2", age:19},
+    {ssid:"TP-Link_4F2A",    bssid:"B0:4E:26:4F:2A:11", ch:1,  rssi:-80, enc:"wpa2", age:24},
+    {ssid:"xfinitywifi",     bssid:"7C:10:C9:02:44:AC", ch:11, rssi:-83, enc:"open", age:31},
+    {ssid:"Samsung_Printer", bssid:"8C:79:F5:2D:66:0A", ch:11, rssi:-88, enc:"wpa2", age:44},
+    {ssid:"rumah_tamu",      bssid:"E8:DE:27:5B:11:C2", ch:1,  rssi:-91, enc:"wpa2", age:124}
+  ];
+  const CH = [3,0,1,0,0,5,0,1,1,0,3,0,1,0];
+  const MACS = [3,2,1,1,2,4,9,18,27,22,19,21,24,26,23,25,29,34,41,48,56,63,51,30];
+  const STALE_AFTER = 90;
+
+  /* channel bars */
+  const chart = document.getElementById('chart'), labels = document.getElementById('chlabels');
+  const max = Math.max(...CH) + 0.8, H = 88;
+  const peak = Math.max(...CH);
+  CH.forEach((n,i)=>{
+    const ch=i+1, isPeak = n===peak && n>0;
+    const b=document.createElement('div');
+    b.className='bar'+(isPeak?' peak':'');
+    b.style.height=(n===0?3:Math.max(3,Math.round(n/max*H)))+'px';
+    b.title='Channel '+ch+' - '+n+' AP'+(n===1?'':'s');
+    b.innerHTML='<span class="cap">'+n+'</span>';
+    chart.appendChild(b);
+    const l=document.createElement('span'); l.textContent=ch; if(isPeak) l.className='is-peak';
+    labels.appendChild(l);
+  });
+
+  /* mac sparkline */
+  const spark=document.getElementById('spark'), mmax=Math.max(...MACS);
+  MACS.forEach((n,i)=>{
+    const d=document.createElement('div');
+    d.className='sb'+(n===mmax?' peak':'');
+    d.style.height=Math.max(2,Math.round(n/mmax*50))+'px';
+    d.title=String(i).padStart(2,'0')+':00 - '+n+' unique';
+    spark.appendChild(d);
+  });
+
+  /* ap list */
+  const list=document.getElementById('aplist');
+  const band=r=>r>=-60?'s-strong':r>=-75?'s-mid':'s-weak';
+  const ago=s=>s<60?s+'s':Math.floor(s/60)+'m '+(s%60)+'s';
+  APS.slice().sort((a,b)=>b.rssi-a.rssi).forEach(ap=>{
+    const stale=ap.age>STALE_AFTER;
+    const el=document.createElement('div');
+    el.className='aprow'+(stale?' stale':'');
+    el.innerHTML=
+      '<div class="nm">'+(ap.ssid===''?'<span class="hidden-tag">hidden network</span>':esc(ap.ssid))+'</div>'+
+      '<div class="sig"><span class="sigdot '+band(ap.rssi)+'"></span>'+ap.rssi+'</div>'+
+      '<div class="sub"><span class="ch">ch '+ap.ch+'</span><span>'+ap.enc+'</span>'+
+        '<span>'+ago(ap.age)+(stale?' &middot; missing':'')+'</span></div>';
+    list.appendChild(el);
+  });
+
+  function esc(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+</script>
+</body>
+</html>
